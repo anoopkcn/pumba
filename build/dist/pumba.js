@@ -19421,6 +19421,78 @@ function map(object, f) {
   return map;
 }
 
+function nest() {
+  var keys = [],
+      sortKeys = [],
+      sortValues,
+      rollup,
+      nest;
+
+  function apply(array, depth, createResult, setResult) {
+    if (depth >= keys.length) {
+      if (sortValues != null) array.sort(sortValues);
+      return rollup != null ? rollup(array) : array;
+    }
+
+    var i = -1,
+        n = array.length,
+        key = keys[depth++],
+        keyValue,
+        value,
+        valuesByKey = map(),
+        values,
+        result = createResult();
+
+    while (++i < n) {
+      if (values = valuesByKey.get(keyValue = key(value = array[i]) + "")) {
+        values.push(value);
+      } else {
+        valuesByKey.set(keyValue, [value]);
+      }
+    }
+
+    valuesByKey.each(function(values, key) {
+      setResult(result, key, apply(values, depth, createResult, setResult));
+    });
+
+    return result;
+  }
+
+  function entries(map, depth) {
+    if (++depth > keys.length) return map;
+    var array, sortKey = sortKeys[depth - 1];
+    if (rollup != null && depth >= keys.length) array = map.entries();
+    else array = [], map.each(function(v, k) { array.push({key: k, values: entries(v, depth)}); });
+    return sortKey != null ? array.sort(function(a, b) { return sortKey(a.key, b.key); }) : array;
+  }
+
+  return nest = {
+    object: function(array) { return apply(array, 0, createObject, setObject); },
+    map: function(array) { return apply(array, 0, createMap, setMap); },
+    entries: function(array) { return entries(apply(array, 0, createMap, setMap), 0); },
+    key: function(d) { keys.push(d); return nest; },
+    sortKeys: function(order) { sortKeys[keys.length - 1] = order; return nest; },
+    sortValues: function(order) { sortValues = order; return nest; },
+    rollup: function(f) { rollup = f; return nest; }
+  };
+}
+
+function createObject() {
+  return {};
+}
+
+function setObject(object, key, value) {
+  object[key] = value;
+}
+
+function createMap() {
+  return map();
+}
+
+function setMap(map, key, value) {
+  map.set(key, value);
+}
+
 function Set() {}
 
 var proto = map.prototype;
@@ -22007,6 +22079,7 @@ function constant$3(x) {
   };
 }
 
+var epsilon$2 = 1e-12;
 var pi$4 = Math.PI;
 
 function Linear(context) {
@@ -22100,6 +22173,141 @@ function line() {
   return line;
 }
 
+function point(that, x, y) {
+  that._context.bezierCurveTo(
+    that._x1 + that._k * (that._x2 - that._x0),
+    that._y1 + that._k * (that._y2 - that._y0),
+    that._x2 + that._k * (that._x1 - x),
+    that._y2 + that._k * (that._y1 - y),
+    that._x2,
+    that._y2
+  );
+}
+
+function Cardinal(context, tension) {
+  this._context = context;
+  this._k = (1 - tension) / 6;
+}
+
+Cardinal.prototype = {
+  areaStart: function() {
+    this._line = 0;
+  },
+  areaEnd: function() {
+    this._line = NaN;
+  },
+  lineStart: function() {
+    this._x0 = this._x1 = this._x2 =
+    this._y0 = this._y1 = this._y2 = NaN;
+    this._point = 0;
+  },
+  lineEnd: function() {
+    switch (this._point) {
+      case 2: this._context.lineTo(this._x2, this._y2); break;
+      case 3: point(this, this._x1, this._y1); break;
+    }
+    if (this._line || (this._line !== 0 && this._point === 1)) this._context.closePath();
+    this._line = 1 - this._line;
+  },
+  point: function(x, y) {
+    x = +x, y = +y;
+    switch (this._point) {
+      case 0: this._point = 1; this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y); break;
+      case 1: this._point = 2; this._x1 = x, this._y1 = y; break;
+      case 2: this._point = 3; // proceed
+      default: point(this, x, y); break;
+    }
+    this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
+    this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
+  }
+};
+
+function point$1(that, x, y) {
+  var x1 = that._x1,
+      y1 = that._y1,
+      x2 = that._x2,
+      y2 = that._y2;
+
+  if (that._l01_a > epsilon$2) {
+    var a = 2 * that._l01_2a + 3 * that._l01_a * that._l12_a + that._l12_2a,
+        n = 3 * that._l01_a * (that._l01_a + that._l12_a);
+    x1 = (x1 * a - that._x0 * that._l12_2a + that._x2 * that._l01_2a) / n;
+    y1 = (y1 * a - that._y0 * that._l12_2a + that._y2 * that._l01_2a) / n;
+  }
+
+  if (that._l23_a > epsilon$2) {
+    var b = 2 * that._l23_2a + 3 * that._l23_a * that._l12_a + that._l12_2a,
+        m = 3 * that._l23_a * (that._l23_a + that._l12_a);
+    x2 = (x2 * b + that._x1 * that._l23_2a - x * that._l12_2a) / m;
+    y2 = (y2 * b + that._y1 * that._l23_2a - y * that._l12_2a) / m;
+  }
+
+  that._context.bezierCurveTo(x1, y1, x2, y2, that._x2, that._y2);
+}
+
+function CatmullRom(context, alpha) {
+  this._context = context;
+  this._alpha = alpha;
+}
+
+CatmullRom.prototype = {
+  areaStart: function() {
+    this._line = 0;
+  },
+  areaEnd: function() {
+    this._line = NaN;
+  },
+  lineStart: function() {
+    this._x0 = this._x1 = this._x2 =
+    this._y0 = this._y1 = this._y2 = NaN;
+    this._l01_a = this._l12_a = this._l23_a =
+    this._l01_2a = this._l12_2a = this._l23_2a =
+    this._point = 0;
+  },
+  lineEnd: function() {
+    switch (this._point) {
+      case 2: this._context.lineTo(this._x2, this._y2); break;
+      case 3: this.point(this._x2, this._y2); break;
+    }
+    if (this._line || (this._line !== 0 && this._point === 1)) this._context.closePath();
+    this._line = 1 - this._line;
+  },
+  point: function(x, y) {
+    x = +x, y = +y;
+
+    if (this._point) {
+      var x23 = this._x2 - x,
+          y23 = this._y2 - y;
+      this._l23_a = Math.sqrt(this._l23_2a = Math.pow(x23 * x23 + y23 * y23, this._alpha));
+    }
+
+    switch (this._point) {
+      case 0: this._point = 1; this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y); break;
+      case 1: this._point = 2; break;
+      case 2: this._point = 3; // proceed
+      default: point$1(this, x, y); break;
+    }
+
+    this._l01_a = this._l12_a, this._l12_a = this._l23_a;
+    this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
+    this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
+    this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
+  }
+};
+
+var catmullRom = (function custom(alpha) {
+
+  function catmullRom(context) {
+    return alpha ? new CatmullRom(context, alpha) : new Cardinal(context, 0);
+  }
+
+  catmullRom.alpha = function(alpha) {
+    return custom(+alpha);
+  };
+
+  return catmullRom;
+})(0.5);
+
 function sign(x) {
   return x < 0 ? -1 : 1;
 }
@@ -22126,7 +22334,7 @@ function slope2(that, t) {
 // According to https://en.wikipedia.org/wiki/Cubic_Hermite_spline#Representations
 // "you can express cubic Hermite interpolation in terms of cubic Bézier curves
 // with respect to the four values p0, p0 + m0 / 3, p1 - m1 / 3, p1".
-function point(that, t0, t1) {
+function point$2(that, t0, t1) {
   var x0 = that._x0,
       y0 = that._y0,
       x1 = that._x1,
@@ -22155,7 +22363,7 @@ MonotoneX.prototype = {
   lineEnd: function() {
     switch (this._point) {
       case 2: this._context.lineTo(this._x1, this._y1); break;
-      case 3: point(this, this._t0, slope2(this, this._t0)); break;
+      case 3: point$2(this, this._t0, slope2(this, this._t0)); break;
     }
     if (this._line || (this._line !== 0 && this._point === 1)) this._context.closePath();
     this._line = 1 - this._line;
@@ -22168,8 +22376,8 @@ MonotoneX.prototype = {
     switch (this._point) {
       case 0: this._point = 1; this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y); break;
       case 1: this._point = 2; break;
-      case 2: this._point = 3; point(this, slope2(this, t1 = slope3(this, x, y)), t1); break;
-      default: point(this, this._t0, t1 = slope3(this, x, y)); break;
+      case 2: this._point = 3; point$2(this, slope2(this, t1 = slope3(this, x, y)), t1); break;
+      default: point$2(this, this._t0, t1 = slope3(this, x, y)); break;
     }
 
     this._x0 = this._x1, this._x1 = x;
@@ -22197,8 +22405,9 @@ ReflectContext.prototype = {
   bezierCurveTo: function(x1, y1, x2, y2, x, y) { this._context.bezierCurveTo(y1, x1, y2, x2, y, x); }
 };
 
-// import {PI} from './constants'
-// import {colors} from './global'
+//
+
+
 function scatter(blueprint) {
     var width = blueprint.canvas.width;
     var height = blueprint.canvas.height;
@@ -22215,37 +22424,66 @@ function scatter(blueprint) {
     // emax = 5
     // emin = -9
     // var fileName=path.join('/Users/chand/workbench/work/keynotes/photovoltaics/viz/band.csv')
-    csv$1(blueprint.data.file).then(function(data) {
+    var dataFile = blueprint.data.file.split('[')[0];
+    csv$1(dataFile).then(function(data) {
         trace(blueprint, data, svg);
     });
 
     return svg
 }
 
+
 function trace(blueprint, data, svg) {
     // domain sould be set here
-    var x, y, xy;
+    var x, y, xy, xselect, yselect;
+
+    var columnRegex = /\[(.*?)\]|\[(.*?)\]/g;
+    var cols = blueprint.data.file.match(columnRegex);
+    var scatterColors = colors(blueprint.data.color);
+
     xy = setAxis(blueprint, [0, 1.72], [-5, 5], svg);
     x = xy.x;
     y = xy.y;
-    var line$1 = line().defined(function(d, i) {
-        var next = 0;
-        var dataSize = data.length;
-        if (i < dataSize - 1) {
-            next = data[i + 1].k;
-            return d.k <= next && d.e >= y.domain()[0] && d.e <= y.domain()[1];
-        }
-    }).x(d => x(d.k)).y(d => y(d.e));
 
-    svg.selectAll('band')
-        .data([data]).enter().append("path")
-        .attr('class', 'someclass')
-        .attr('stroke', 'red') //d => bandColor(style.name)
-        .attr("stroke-width", 2)
-        .attr("opacity", 1)
-        .attr("fill", 'none')
-        .attr("d", line$1);
+    // console.log(cols.length)
+    // console.log(scatterColors.length)
+    for (let i = 0; i < cols.length; i++) {
+        if (cols == null) {
+            xselect = 0;
+            yselect = 1;
+        } else {
+            xselect = Number(cols[i].slice(1, 2)) - 1;
+            yselect = Number(cols[i].slice(3, 4)) - 1;
+        }
+
+        var xcol = `${data.columns[xselect]}`;
+        var ycol = `${data.columns[yselect]}`;
+        var groupBy = `${data.columns[blueprint.data.groupBy[0] -1]}`; //TODO -groupBy[i]
+
+        var band = nest() // nest based on bandindex
+            .key(function(d) { return d[groupBy] })
+            .entries(data);
+
+        var line$1 = line()
+            .defined((d) => d[ycol] >= y.domain()[0] && d[ycol] <= y.domain()[1])
+            .x(d => x(+d[xcol])).y(d => y(+d[ycol]));
+        if (blueprint.data.smooth) {
+            if (blueprint.data.smooth == 'spline-cat') {
+                line$1.curve(catmullRom);
+            }
+        }
+
+        svg.selectAll('band')
+            .data(band).enter().append("path")
+            .attr('class', 'someclass')
+            .attr('stroke', scatterColors[i])
+            .attr("stroke-width", 2.5)
+            .attr("opacity", 1)
+            .attr("fill", 'none')
+            .attr("d", (d) => line$1(d.values));
+    }
 }
+
 
 function setAxis(blueprint, xDom, yDom, svg) {
 

@@ -1,6 +1,9 @@
 import * as d3 from 'd3'
 // import {PI} from './constants'
-// import {colors} from './global'
+import { colors } from './global'
+//
+
+
 export function scatter(blueprint) {
     var width = blueprint.canvas.width
     var height = blueprint.canvas.height
@@ -17,36 +20,66 @@ export function scatter(blueprint) {
     // emax = 5
     // emin = -9
     // var fileName=path.join('/Users/chand/workbench/work/keynotes/photovoltaics/viz/band.csv')
-    d3.csv(blueprint.data.file).then(function(data) {
+    var dataFile = blueprint.data.file.split('[')[0]
+    d3.csv(dataFile).then(function(data) {
         trace(blueprint, data, svg)
     })
 
     return svg
 }
 
+
 function trace(blueprint, data, svg) {
     // domain sould be set here
-    var x, y, xy
-    xy = setAxis(blueprint, [0, 1.72], [-5, 5], svg)
-    x = xy.x; y = xy.y
-    var line = d3.line().defined(function(d, i) {
-        var next = 0
-        var dataSize = data.length
-        if (i < dataSize - 1) {
-            next = data[i + 1].k
-            return d.k <= next && d.e >= y.domain()[0] && d.e <= y.domain()[1];
-        }
-    }).x(d => x(d.k)).y(d => y(d.e))
+    var x, y, xy, xselect, yselect
 
-    svg.selectAll('band')
-        .data([data]).enter().append("path")
-        .attr('class', 'someclass')
-        .attr('stroke', 'red') //d => bandColor(style.name)
-        .attr("stroke-width", 2)
-        .attr("opacity", 1)
-        .attr("fill", 'none')
-        .attr("d", line);
+    var columnRegex = /\[(.*?)\]|\[(.*?)\]/g;
+    var cols = blueprint.data.file.match(columnRegex);
+    var scatterColors = colors(blueprint.data.color)
+
+    xy = setAxis(blueprint, [0, 1.72], [-5, 5], svg)
+    x = xy.x;
+    y = xy.y
+
+    // console.log(cols.length)
+    // console.log(scatterColors.length)
+    for (let i = 0; i < cols.length; i++) {
+        if (cols == null) {
+            xselect = 0
+            yselect = 1
+        } else {
+            xselect = Number(cols[i].slice(1, 2)) - 1
+            yselect = Number(cols[i].slice(3, 4)) - 1
+        }
+
+        var xcol = `${data.columns[xselect]}`
+        var ycol = `${data.columns[yselect]}`
+        var groupBy = `${data.columns[blueprint.data.groupBy[0] -1]}` //TODO -groupBy[i]
+
+        var band = d3.nest() // nest based on bandindex
+            .key(function(d) { return d[groupBy] })
+            .entries(data)
+
+        var line = d3.line()
+            .defined((d) => d[ycol] >= y.domain()[0] && d[ycol] <= y.domain()[1])
+            .x(d => x(+d[xcol])).y(d => y(+d[ycol]))
+        if (blueprint.data.smooth) {
+            if (blueprint.data.smooth == 'spline-cat') {
+                line.curve(d3.curveCatmullRom)
+            }
+        }
+
+        svg.selectAll('band')
+            .data(band).enter().append("path")
+            .attr('class', 'someclass')
+            .attr('stroke', scatterColors[i])
+            .attr("stroke-width", 2.5)
+            .attr("opacity", 1)
+            .attr("fill", 'none')
+            .attr("d", (d) => line(d.values));
+    }
 }
+
 
 function setAxis(blueprint, xDom, yDom, svg) {
 

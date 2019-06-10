@@ -24,8 +24,10 @@
             'resize': true
         },
         'data':{
-            'file':'data/band.csv',
-            // 'file':'/Users/chand/workbench/work/keynotes/photovoltaics/viz/band.csv',
+            'file':'data/spexband.csv[2:3][2:4]',
+            'groupBy':[1],
+            'smooth':'spline-cat',
+            'color':'1E78B4F06A65',
             'tick':{
                 'label':[
                     { 'x': 0.00000, 'label': '$\\Gamma$'.tex() },
@@ -38,7 +40,6 @@
             }
         }
     }
-    var svg = pumba.scatter(blueprint)
-    // console.log(svg)
+    pumba.scatter(blueprint)
 </script>
 </html>
