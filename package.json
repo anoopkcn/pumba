@@ -3,9 +3,14 @@
   "version": "0.0.1",
   "description": "data vizualization",
   "main": "src/pumba.js",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/anoopkcn/pumba.git"
+  },
+   "author": {
+    "name": "Anoop Chandran",
+    "url": "https://anoopkcn.com"
   },
   "scripts": {
     "build": "rollup -c",
