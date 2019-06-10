@@ -1,7 +1,6 @@
 import * as d3 from 'd3'
 // import {PI} from './constants'
 import { colors } from './global'
-//
 
 
 export function scatter(blueprint) {
@@ -15,10 +14,6 @@ export function scatter(blueprint) {
         .append("g")
         .attr("transform", "translate(" + blueprint.canvas.margin.left + "," + blueprint.canvas.margin.top + ")")
 
-    // kmin = Math.min(d3.min(MAPI, d => d.k), d3.min(PI, d => d.k))
-    // kmax = Math.max(d3.max(MAPI, d => d.k), d3.max(PI, d => d.k))
-    // emax = 5
-    // emin = -9
     // var fileName=path.join('/Users/chand/workbench/work/keynotes/photovoltaics/viz/band.csv')
     var dataFile = blueprint.data.file.split('[')[0]
     d3.csv(dataFile).then(function(data) {
@@ -30,30 +25,50 @@ export function scatter(blueprint) {
 
 
 function trace(blueprint, data, svg) {
+
     // domain sould be set here
-    var x, y, xy, xselect, yselect
+    var x, y, xy, xselect, yselect, xcol, ycol
+    var xDom, yDom
+
+    // style variables
+    var opacity, strokeWidth
+
+    xselect = 0
+    yselect = 1
 
     var columnRegex = /\[(.*?)\]|\[(.*?)\]/g;
-    var cols = blueprint.data.file.match(columnRegex);
+    var cols = blueprint.data.file.match(columnRegex); // TODO-file not provided
     var scatterColors = colors(blueprint.data.color)
 
-    xy = setAxis(blueprint, [0, 1.72], [-5, 5], svg)
-    x = xy.x;
+    if (cols != null) {
+        xselect = Number(cols[0].slice(1, 2)) - 1
+        yselect = Number(cols[0].slice(3, 4)) - 1
+    }
+    xcol = `${data.columns[xselect]}`
+    ycol = `${data.columns[yselect]}`
+
+    // TODO - domain defaults based on data multiple files
+    // 
+    xDom = [d3.min(data, d => +d[xcol]), d3.max(data, d => +d[xcol])]
+    yDom = [d3.min(data, d => +d[ycol]), d3.max(data, d => +d[ycol])]
+    if (blueprint.data.domain) {
+        blueprint.data.domain.x? xDom = blueprint.data.domain.x:xDom
+        blueprint.data.domain.y? yDom = blueprint.data.domain.y:yDom
+    }
+
+    xy = setAxis(blueprint, xDom, yDom, svg)
+    x = xy.x
     y = xy.y
 
-    // console.log(cols.length)
-    // console.log(scatterColors.length)
+    // TODO - scatterColors length != cols.length ??
     for (let i = 0; i < cols.length; i++) {
-        if (cols == null) {
-            xselect = 0
-            yselect = 1
-        } else {
+        if (cols != null) {
             xselect = Number(cols[i].slice(1, 2)) - 1
             yselect = Number(cols[i].slice(3, 4)) - 1
         }
+        xcol = `${data.columns[xselect]}`
+        ycol = `${data.columns[yselect]}`
 
-        var xcol = `${data.columns[xselect]}`
-        var ycol = `${data.columns[yselect]}`
         var groupBy = `${data.columns[blueprint.data.groupBy[0] -1]}` //TODO -groupBy[i]
 
         var band = d3.nest() // nest based on bandindex
@@ -61,8 +76,9 @@ function trace(blueprint, data, svg) {
             .entries(data)
 
         var line = d3.line()
-            .defined((d) => d[ycol] >= y.domain()[0] && d[ycol] <= y.domain()[1])
+            .defined((d) => +d[ycol] >= y.domain()[0] && +d[ycol] <= y.domain()[1])
             .x(d => x(+d[xcol])).y(d => y(+d[ycol]))
+
         if (blueprint.data.smooth) {
             if (blueprint.data.smooth == 'spline-cat') {
                 line.curve(d3.curveCatmullRom)
@@ -89,7 +105,7 @@ function setAxis(blueprint, xDom, yDom, svg) {
     var x = d3.scaleLinear().range([0, width]).domain(xDom)
     var y = d3.scaleLinear().range([height, 0]).domain(yDom)
 
-    var tickLabel = blueprint.data.tick.label
+    var tickLabel = blueprint.data.tick.label //TODO-default
 
     // Add the x-axis at bottom of the page
     svg.append("g")
