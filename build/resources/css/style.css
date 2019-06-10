@@ -5,3 +5,63 @@ svg {
     display: block;
     margin: auto;
 }
+
+
+/* Band And DOS*/
+.axis {
+    shape-rendering: crispEdges;
+}
+
+.tooltip {
+    position: absolute;
+    text-align: center;
+    font: 12px sans-serif;
+    border: 0px;
+    pointer-events: none;
+    font-size: 16px;
+}
+
+#tooltip-left {
+    color: #ffffff;
+    padding: 2px;
+    float: left;
+}
+
+#tooltip-right {
+    float: left;
+    padding: 2px;
+    color: #625F5D;
+    background: hsla(0, 0%, 100%, 0.525);
+    /* opacity: 0.5; */
+}
+
+.x-axis text,
+.y-axis text {
+    font-size: 20px;
+    fill: #625F5D;
+}
+
+.x-axis line,
+.y-axis line {
+    stroke: #625F5D;
+}
+
+.x-axis path,
+.y-axis path {
+    stroke: #BFBFBA;
+    stroke-width: 2px;
+}
+
+.tick line {
+    stroke: #BFBFBA;
+}
+
+.xTicks {
+    color: #625F5D;
+    font-size: 18px;
+}
+
+.zeroline {
+    stroke: #BFBFBA;
+    stroke-width: 2px;
+}
