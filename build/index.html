@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>pumba-TEST</title>
+     <link rel="stylesheet" type="text/css" href="./css/style.css" />
+     <link rel="stylesheet" type="text/css" href="./css/katex.css" />
+     <script src="./pumba.js"></script>
+</head>
+<body>
+    <div id="eqn"> </div>
+    <div id="dataviz"></div>
+</body>
+<script>
+    // console.log(pumba)
+    // document.getElementById("eqn").innerHTML = "hello $x^2$ and $H\\psi = E \\psi$".tex();
+    var blueprint ={
+        'canvas': {
+            'name': 'dataviz',
+            'view': { 'width': 900, 'height': 650 },
+            'width': 900,
+            'height': 600,
+            'margin': { 'top': 60, 'right': 60, 'bottom': 60, 'left': 60 },
+            'resize': true
+        },
+        'data':{
+            'file':'data/band.csv',
+            // 'file':'/Users/chand/workbench/work/keynotes/photovoltaics/viz/band.csv',
+            'tick':{
+                'label':[
+                    { 'x': 0.00000, 'label': '$\\Gamma$'.tex() },
+                    { 'x': 0.45562, 'label': '$R$'.tex() },
+                    { 'x': 0.82763, 'label': '$X$'.tex() },
+                    { 'x': 1.09068, 'label': '$M$'.tex() },
+                    { 'x': 1.46269, 'label': '$\\Gamma$'.tex() },
+                    { 'x': 1.71800, 'label': '$X$'.tex() }
+                ]
+            }
+        }
+    }
+    var svg = pumba.scatter(blueprint)
+    // console.log(svg)
+</script>
+</html>
