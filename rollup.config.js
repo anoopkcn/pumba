@@ -1,5 +1,6 @@
 import ascii from "rollup-plugin-ascii";
 import node from "rollup-plugin-node-resolve";
+import babel from 'rollup-plugin-babel';
 
 export default [
   {
@@ -12,6 +13,9 @@ export default [
     input: "src/pumba",
     plugins: [
       node(),
+      babel({
+        exclude: 'node_modules/**' // only transpile our source code
+      }),
       ascii()
     ],
     output: {

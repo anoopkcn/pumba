@@ -1,34 +1,33 @@
 {
   "name": "pumba",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "data vizualization",
   "main": "src/pumba.js",
-  "license": "BSD-3-Clause",
+  "license": "ISC",
   "repository": {
     "type": "git",
     "url": "https://github.com/anoopkcn/pumba.git"
   },
-   "author": {
-    "name": "Anoop Chandran",
-    "url": "https://anoopkcn.com"
-  },
+  "author": "",
   "scripts": {
     "build": "rollup -c",
     "start": "node build/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "d3": "^5.9.2",
     "file-system": "^2.2.2",
     "rollup": "^1.14.6",
     "rollup-plugin-ascii": "0.0.3",
+    "rollup-plugin-babel": "^4.3.2",
     "rollup-plugin-node-resolve": "^5.0.1",
     "rollup-plugin-terser": "^5.0.0"
   },
   "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/preset-env": "^7.4.5",
     "eslint": "^5.16.0",
     "express": "^4.17.1"
   }

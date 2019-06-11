@@ -11,4 +11,4 @@ app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(port, () => console.log(`pumba listening to port ${port}!`))
+app.listen(port, () => console.log(`pumba listening to port http://localhost:${port}/`))
