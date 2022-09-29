@@ -16,7 +16,7 @@
   },
   "keywords": [],
   "dependencies": {
-    "d3": "^5.9.2",
+    "d3": "^7.6.1",
     "file-system": "^2.2.2",
     "rollup": "^1.14.6",
     "rollup-plugin-ascii": "0.0.3",
